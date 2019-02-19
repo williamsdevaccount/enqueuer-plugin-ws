@@ -1,6 +1,5 @@
-// @ts-ignore
-import WebSocket =  require('ws');
 import {Logger, MainInstance, Subscription, SubscriptionModel, SubscriptionProtocol} from 'enqueuer-plugins-template';
+import WebSocket from 'ws';
 
 export class WsSubscription extends Subscription {
 

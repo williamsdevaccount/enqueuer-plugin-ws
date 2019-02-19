@@ -1,5 +1,5 @@
-import WebSocket =  require('ws');
 import {PublisherProtocol, Publisher, PublisherModel, Logger, MainInstance} from 'enqueuer-plugins-template';
+import WebSocket from 'ws';
 
 export class WSPublisher extends Publisher {
 
