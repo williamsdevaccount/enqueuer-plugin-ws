@@ -1,13 +1,12 @@
 publishers:
 -   type: ws
     name: publisher description
-    address: ws://localhost
+    address: ws://localhost:8080
     payload: enqueuer
-    options:
-        clientId: enqueuerPublishOptionsExampleIdDifferent2313
 subscriptions:
 -   type: ws
-    address: ws://localhost
+    name: my subscription
+    address: ws://localhost:8080
     timeout: 5000
     onMessageReceived:
         script: payload = Buffer.from(message.payload);

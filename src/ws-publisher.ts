@@ -1,5 +1,4 @@
-// @ts-ignore
-import * as WebSocket from 'ws';
+import WebSocket =  require('ws');
 import {PublisherProtocol, Publisher, PublisherModel, Logger, MainInstance} from 'enqueuer-plugins-template';
 
 export class WSPublisher extends Publisher {
@@ -20,9 +19,11 @@ export class WSPublisher extends Publisher {
                         if (err) {
                             Logger.error(`Error sending to web socket at ${this.address}: ${err}`);
                             reject(err);
+                        } else {
+                            Logger.trace('WS published message successfully');
                         }
+                        client.terminate();
                     });
-                    client.terminate();
                     resolve();
                 });
         });
@@ -30,16 +31,19 @@ export class WSPublisher extends Publisher {
 
     private connectClient(): Promise<any> {
         return new Promise((resolve, reject) => {
+            Logger.trace('Publisher : connecting to ws');
             const socket = new WebSocket(this.address);
-            if (socket.readyState === 1) {
-                resolve(socket);
-            } else {
-                socket.on('open', () => resolve(socket));
-            }
             socket.on('error', (err: any) => {
                 Logger.error(`Error connecting to publish to web socket ${err}`);
                 reject(err);
             });
+            if (socket.readyState === 1) {
+                Logger.trace('socket connecting resolving.');
+                resolve(socket);
+            } else {
+                Logger.trace('socket not connected waiting until it is connected');
+                socket.on('open', () => resolve(socket));
+            }
         });
     }
 

@@ -1,5 +1,5 @@
 // @ts-ignore
-import * as WebSocket from 'ws';
+import WebSocket =  require('ws');
 import {Logger, MainInstance, Subscription, SubscriptionModel, SubscriptionProtocol} from 'enqueuer-plugins-template';
 
 export class WsSubscription extends Subscription {
@@ -28,21 +28,23 @@ export class WsSubscription extends Subscription {
         return new Promise((resolve, reject) => {
             Logger.trace(`WS connecting to web socket server ${this.address}`);
             this.client = new WebSocket(this.address);
-            Logger.trace(`WS client created`);
+            this.client.on('error', (error: any) => {
+                Logger.error(`Error subscribing to ws ${error}`);
+                reject(error);
+            });
+            Logger.trace(`WS client created with ready state: ${this.client.readyState}, proto : ${this.client.protocol}`);
             if (!this.isClientConnected()) {
-                this.client.on('connect', () =>  {
+                Logger.trace('WS client is not connected connecting...');
+                this.client.on('open', () =>  {
                     Logger.debug(`ws client connected to ${this.address}`);
                     this.client.on('message', (payload: string) => this.gotMessage(payload));
                     resolve();
                 });
             } else {
+                Logger.trace('WS client already connected ready to recieve messages');
                 this.client.on('message', (payload: string) => this.gotMessage(payload));
                 resolve();
             }
-            this.client.on('error', (error: any) => {
-                Logger.error(`Error subscribing to ws ${error}`);
-                reject(error);
-            });
         });
     }
 

@@ -14,7 +14,7 @@
     "no-unused-expression": true,
     "no-use-before-declare": true,
     "no-var-requires": true,
-    "no-require-imports": true,
+    "no-require-imports": false,
     "one-line": [true, "check-else", "check-whitespace", "check-open-brace"],
     "quotemark": [true, "single", "avoid-escape"],
     "semicolon": [true, "always"],
