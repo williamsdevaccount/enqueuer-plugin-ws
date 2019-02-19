@@ -1,0 +1,20 @@
+publishers:
+-   type: ws
+    name: publisher description
+    address: ws://localhost
+    payload: enqueuer
+    options:
+        clientId: enqueuerPublishOptionsExampleIdDifferent2313
+subscriptions:
+-   type: ws
+    address: ws://localhost
+    timeout: 5000
+    onMessageReceived:
+        script: payload = Buffer.from(message.payload);
+        assertions:
+        -   name: Payload
+            expect: payload
+            toBeEqualTo: `enqueuer`
+        -   name: Beatles song
+            expect: payload.length
+            toBeGreaterThan: 5
