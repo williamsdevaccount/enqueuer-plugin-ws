@@ -3,13 +3,18 @@ publishers:
     name: publisher description
     address: ws://localhost:8080
     payload: enqueuer
+    responseTimeout: 2000
+    onMessageReceived:
+        assertions:
+        -   expect: payload
+            toBeEqualTo: `it's bidirectional`
 subscriptions:
 -   type: ws
     name: my subscription
-    address: ws://localhost:8080
+    port: 8080
     timeout: 5000
+    response: it's bidirectional
     onMessageReceived:
-        script: payload = Buffer.from(message.payload);
         assertions:
         -   name: Payload
             expect: payload
