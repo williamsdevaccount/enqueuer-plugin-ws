@@ -1,67 +1,68 @@
-import {Logger, MainInstance, Subscription, SubscriptionModel, SubscriptionProtocol} from 'enqueuer-plugins-template';
+import {MainInstance, Subscription, SubscriptionModel, SubscriptionProtocol, Logger} from 'enqueuer-plugins-template';
 import WebSocket from 'ws';
 
 export class WsSubscription extends Subscription {
 
-    private client: any;
+    private wss?: WebSocket.Server;
+    private client?: WebSocket;
     private messageReceivedResolver?: (value?: (PromiseLike<any> | any)) => void;
 
     constructor(subscriptionAttributes: SubscriptionModel) {
         super(subscriptionAttributes);
-        this.options = subscriptionAttributes.options || {};
-        this.options.connectTimeout = this.options.connectTimeout || 10 * 1000;
     }
 
     public receiveMessage(): Promise<any> {
-        return new Promise((resolve, reject) => {
-            if (!this.isClientConnected()) {
-                reject(`Error trying to receive message. Subscription is not connected yet: ${this.address}`);
-            } else {
-                Logger.debug('WS message receiver resolver initialized');
-                this.messageReceivedResolver = resolve;
-            }
+        return new Promise((resolve) => {
+            Logger.debug('WS message receiver resolver initialized');
+            this.messageReceivedResolver = resolve;
         });
     }
 
     public subscribe(): Promise<void> {
         return new Promise((resolve, reject) => {
-            Logger.trace(`WS connecting to web socket server ${this.address}`);
-            this.client = new WebSocket(this.address);
-            this.client.on('error', (error: any) => {
-                Logger.error(`Error subscribing to ws ${error}`);
-                reject(error);
-            });
-            Logger.trace(`WS client created with ready state: ${this.client.readyState}, proto : ${this.client.protocol}`);
-            if (!this.isClientConnected()) {
-                Logger.trace('WS client is not connected connecting...');
-                this.client.on('open', () =>  {
-                    Logger.debug(`ws client connected to ${this.address}`);
-                    this.client.on('message', (payload: string) => this.gotMessage(payload));
-                    resolve();
+            const wss = new WebSocket.Server({port: this.port}, () => {
+                this.wss = wss;
+                Logger.trace(`WebSocket server created`);
+                this.wss.on('connection', (client: WebSocket) => {
+                    Logger.debug(`WebSocket server got connection`);
+                    this.client = client;
+                    client.on('message', (data: WebSocket.Data) => this.gotMessage(data));
                 });
-            } else {
-                Logger.trace('WS client already connected ready to recieve messages');
-                this.client.on('message', (payload: string) => this.gotMessage(payload));
+                this.wss.on('error', (server: WebSocket, error: Error) => {
+                    let message = `Error creating webSocket server: ${error}`;
+                    Logger.error(message);
+                    reject(error);
+                });
                 resolve();
-            }
+            });
         });
     }
 
     public async unsubscribe(): Promise<void> {
-        if (this.client) {
-            this.client.terminate();
+        if (this.wss) {
+            this.wss.close();
         }
-        delete this.client;
     }
-    private isClientConnected(): boolean {
-        return this.client! && this.client!.readyState! === 1;
+
+    public async sendResponse(): Promise<void> {
+        if (this.client && !!this.response) {
+            this.client.send(this.response, (err?: Error) => {
+                if (err) {
+                    let message = `Error sending response back to the client: ${err}`;
+                    Logger.error(message);
+                    throw message;
+                }
+                Logger.debug(`WebSocket server Response sent back to the client`);
+            });
+        }
     }
-    private gotMessage(payload: string) {
-        Logger.debug('WS got message');
+
+    private gotMessage(payload: WebSocket.Data) {
+        Logger.trace('WebSocket server got message: ' + payload);
         if (this.messageReceivedResolver) {
             this.messageReceivedResolver({payload: payload});
         } else {
-            Logger.error('WS message receiver resolver is not initialized');
+            Logger.warning('WebSocket server message receiver resolver is not initialized');
         }
     }
 }
