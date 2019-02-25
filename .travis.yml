@@ -16,14 +16,9 @@ notifications:
     on_success: never
     on_failure: always
 
-before_install:
-  - npm install -g pm2
-
 script:
   - npm install
   - npm run lint
   - npm run build
   - npm link
-  - npm run socketServerStart
-  - nqr -a examples/ws.yml -l /home/travis/build/williamsdevaccount/enqueuer-plugin-ws && sleep 10
-  - npm run socketServerStop
+  - nqr -a examples/ws-testserver.yml -l /home/travis/build/williamsdevaccount/enqueuer-plugin-ws && sleep 10

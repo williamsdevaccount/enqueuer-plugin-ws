@@ -1,52 +1,44 @@
-import WebSocket =  require('ws');
+import WebSocket from 'ws';
 import {PublisherProtocol, Publisher, PublisherModel, Logger, MainInstance} from 'enqueuer-plugins-template';
+import * as utils from './utils';
 
 export class WSPublisher extends Publisher {
 
     public constructor(publish: PublisherModel) {
         super(publish);
-        this.options = this.options || {};
+        this.testServer = this.testServer || false;
+        Logger.trace(`publisher is in testServer mode : ${this.testServer}`);
     }
 
     public publish(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            this.connectClient()
-                .then(client => {
+        return new Promise(async (resolve, reject) => {
+            if (this.testServer) {
+                this.address = utils.TEST_SERVER_URI;
+                await utils.createTestServer();
+            }
+            utils.getScoketClient(this.address)
+                .then((client: WebSocket) => {
                     Logger.debug(`web socket publishing in ${this.address}: ${this.payload}`
                         .substr(0, 100).concat('...'));
-                    const toPublish = typeof this.payload == 'object' ? JSON.stringify(this.payload) : this.payload;
+                    const toPublish = typeof this.payload === 'object' ? JSON.stringify(this.payload) : this.payload;
                     client.send(toPublish, (err: any) => {
                         if (err) {
                             Logger.error(`Error sending to web socket at ${this.address}: ${err}`);
                             reject(err);
                         } else {
-                            Logger.trace('WS published message successfully');
+                            Logger.debug('WS published message successfully');
                         }
-                        client.terminate();
                     });
-                    resolve();
-                });
+                    setTimeout(() => resolve(), this.responseTimeout || 1000);
+                    client.on('message', (data: WebSocket.Data)  => {
+                        Logger.debug('WebSocket publisher got message');
+                        this.messageReceived = {payload: data};
+                        client.close();
+                        resolve();
+                    });
+                }).catch((err: Error) => reject(err));
         });
     }
-
-    private connectClient(): Promise<any> {
-        return new Promise((resolve, reject) => {
-            Logger.trace('Publisher : connecting to ws');
-            const socket = new WebSocket(this.address);
-            socket.on('error', (err: any) => {
-                Logger.error(`Error connecting to publish to web socket ${err}`);
-                reject(err);
-            });
-            if (socket.readyState === 1) {
-                Logger.trace('socket connecting resolving.');
-                resolve(socket);
-            } else {
-                Logger.trace('socket not connected waiting until it is connected');
-                socket.on('open', () => resolve(socket));
-            }
-        });
-    }
-
 }
 
 export function entryPoint(mainInstance: MainInstance): void {

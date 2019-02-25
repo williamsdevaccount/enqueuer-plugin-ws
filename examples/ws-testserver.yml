@@ -1,0 +1,24 @@
+publishers:
+  -   type: ws
+      name: publisher description
+      payload: enqueuer
+      testServer: true
+      responseTimeout: 2000
+      onMessageReceived:
+        assertions:
+          -   expect: payload
+              toBeEqualTo: `enqueuer`
+subscriptions:
+  -   type: ws
+      name: my subscription
+      timeout: 5000
+      testServer: true
+      onMessageReceived:
+        script: payload = Buffer.from(message.payload);
+        assertions:
+          -   name: Payload
+              expect: payload
+              toBeEqualTo: `enqueuer`
+          -   name: Beatles song
+              expect: payload.length
+              toBeGreaterThan: 5
