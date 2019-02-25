@@ -3,11 +3,18 @@ publishers:
     name: publisher description
     address: ws://localhost:8080
     payload: enqueuer
+    testServer: false
+    responseTimeout: 2000
+    onMessageReceived:
+        assertions:
+            -   expect: payload
+                toBeEqualTo: `enqueuer`
 subscriptions:
 -   type: ws
     name: my subscription
     address: ws://localhost:8080
     timeout: 5000
+    testServer: false
     onMessageReceived:
         script: payload = Buffer.from(message.payload);
         assertions:

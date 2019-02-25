@@ -1,21 +1,20 @@
-// @ts-ignore
-import WebSocket =  require('ws');
+import WebSocket from 'ws';
 import {Logger, MainInstance, Subscription, SubscriptionModel, SubscriptionProtocol} from 'enqueuer-plugins-template';
-
+import * as utils from './utils';
 export class WsSubscription extends Subscription {
 
-    private client: any;
+    private client?: WebSocket;
     private messageReceivedResolver?: (value?: (PromiseLike<any> | any)) => void;
 
     constructor(subscriptionAttributes: SubscriptionModel) {
         super(subscriptionAttributes);
-        this.options = subscriptionAttributes.options || {};
-        this.options.connectTimeout = this.options.connectTimeout || 10 * 1000;
+        this.testServer = this.testServer || false;
+        Logger.debug(`subscriber is in testServer mode : ${this.testServer}`);
     }
 
     public receiveMessage(): Promise<any> {
         return new Promise((resolve, reject) => {
-            if (!this.isClientConnected()) {
+            if (!utils.isSocketConnected(this.client)) {
                 reject(`Error trying to receive message. Subscription is not connected yet: ${this.address}`);
             } else {
                 Logger.debug('WS message receiver resolver initialized');
@@ -25,40 +24,30 @@ export class WsSubscription extends Subscription {
     }
 
     public subscribe(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            Logger.trace(`WS connecting to web socket server ${this.address}`);
-            this.client = new WebSocket(this.address);
-            this.client.on('error', (error: any) => {
-                Logger.error(`Error subscribing to ws ${error}`);
-                reject(error);
-            });
-            Logger.trace(`WS client created with ready state: ${this.client.readyState}, proto : ${this.client.protocol}`);
-            if (!this.isClientConnected()) {
-                Logger.trace('WS client is not connected connecting...');
-                this.client.on('open', () =>  {
-                    Logger.debug(`ws client connected to ${this.address}`);
+        return new Promise(async (resolve, reject) => {
+            if (this.testServer) {
+                this.address = utils.TEST_SERVER_URI;
+                Logger.debug('Subscriber: test server property set to true starting up test socket server');
+                await utils.createTestServer();
+            }
+            Logger.debug(`WS connecting to web socket server ${this.address}`);
+            utils.getScoketClient(this.address)
+                .then((client: WebSocket) => {
+                    this.client = client;
                     this.client.on('message', (payload: string) => this.gotMessage(payload));
                     resolve();
-                });
-            } else {
-                Logger.trace('WS client already connected ready to recieve messages');
-                this.client.on('message', (payload: string) => this.gotMessage(payload));
-                resolve();
-            }
+                }).catch((err: Error) => reject(err));
         });
     }
 
     public async unsubscribe(): Promise<void> {
         if (this.client) {
-            this.client.terminate();
+            this.client.close();
         }
         delete this.client;
     }
-    private isClientConnected(): boolean {
-        return this.client! && this.client!.readyState! === 1;
-    }
     private gotMessage(payload: string) {
-        Logger.debug('WS got message');
+        Logger.debug('WS subscriber got message');
         if (this.messageReceivedResolver) {
             this.messageReceivedResolver({payload: payload});
         } else {
