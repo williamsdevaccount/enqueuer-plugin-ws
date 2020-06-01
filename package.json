@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/williamsdevaccount/enqueuer-plugin-ws#readme",
   "devDependencies": {
-    "@types/node": "^11.9.4",
+    "@types/node": "^14.0.7",
     "@types/ws": "^6.0.1",
     "ts-node": "^8.0.2",
     "tslint": "^5.11.0",
